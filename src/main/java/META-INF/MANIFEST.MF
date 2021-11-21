@@ -1,0 +1,17 @@
+Manifest-Version: 1.0
+Class-Path: jms.jar bicmn.jar jewt4.jar share.jar bipres.jar jdbc12.jar 
+ ojdbc6.jar Siebel.jar MQeBase.jar iSignBmp.jar jaxws-rt.jar xdo-core.ja
+ r fscontext.jar SiebelSMQ.jar terajdbc4.jar com.ibm.mq.jar fix6312772.j
+ ar i18nAPI_v3.jar pdfBarcode.jar siebel-jbs.war SiebelXMLP.jar collecti
+ ons.jar InkToolsLib.jar LoadKHDData.jar MQeSecurity.jar siebel-rest.war
+  versioninfo.jar VTBPDFUtils.jar xmlparserv2.jar providerutil.jar Siebe
+ lJI_enu.jar xdoparser11g.jar XSLFunctions.jar com.ibm.mqjms.jar SignMig
+ ration.jar com.ibm.mq.pcf.jar commons-io-2.6.jar DataBaseAccess.jar Sie
+ bel_JavaDoc.jar com.ibm.mq.jmqi.jar com.ibm.mq.soap.jar xmlparserv2-904
+ .jar com.ibm.mq.axis2.jar SiebelCustomXMLP.jar SiebelSMQServlet.war Jav
+ aHttpTransport.jar orai18n-collation.jar pdfbox-app-2.0.15.jar com.ibm.
+ mq.headers.jar siebel-eaioutbound.war com.ibm.mq.postcard.jar siebel-co
+ nfigurator.war com.ibm.mq.allclient.jar com.ibm.mq.tools.ras.jar Siebel
+ CustomXMLP_SIA.jar com.ibm.mq.jms.Nojndi.jar com.ibm.mq.traceControl.ja
+ r com.ibm.mq.defaultconfig.jar com.ibm.mq.commonservices.jar
+
