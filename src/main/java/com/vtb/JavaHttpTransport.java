@@ -7,6 +7,7 @@ import com.siebel.eai.SiebelBusinessServiceException;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -36,8 +37,7 @@ public class JavaHttpTransport extends SiebelBusinessService {
             byte[] value;
             TrustManager[] trustAllCerts;
             HttpsURLConnection client;
-            int responseHttpCode;
-
+            int responseHttpCode = 0;
             int valueMethod = 0;
 
             if (url == null || url.equals("") || (authorization == null)
@@ -58,7 +58,6 @@ public class JavaHttpTransport extends SiebelBusinessService {
             }
             switch (valueMethod) {
                 case 1:
-
                     trustAllCerts = new TrustManager[]{
                             new X509TrustManager() {
 
@@ -97,61 +96,59 @@ public class JavaHttpTransport extends SiebelBusinessService {
                     client.setRequestProperty("Accept", "*/*");
                     client.setRequestProperty("Charset", charset);
                     client.setRequestProperty("Authorization", authorization);
-
-                    int contentLength = client.getContentLength();
-                    if (contentLength == -1) {
-                        try (BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()))) {
-                            String line;
-                            StringBuilder response = new StringBuilder();
-                            while ((line = in.readLine()) != null) {
-                                response.append(line).append("\n");
+                    int contentLength = 0;
+                    try {
+                        responseHttpCode = client.getResponseCode();
+                    } catch (Exception e) {
+                        throw new SiebelBusinessServiceException("ERROR_GET_RESPONSE_CODE", "Error get 'getResponseCode'.");
+                    }
+                    String stringResponse = "";
+                    try {
+                        if (String.valueOf(responseHttpCode).matches("2.*")) {
+                            InputStream raw = client.getInputStream();
+                            PushbackInputStream pis = new PushbackInputStream(raw);
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            int code;
+                            try {
+                                while ((code = pis.read()) != -1) {
+                                    baos.write(code);
+                                }
+                            } catch (Exception ignored) {
+                            } finally {
+                                if(pis != null) {
+                                    pis.close();
+                                }
+                                if(raw != null) {
+                                    raw.close();
+                                }
                             }
-                            responseHttpCode = client.getResponseCode();
-                            String stringResponse = response.toString();
-                            if (responseHttpCode == 204) {
-                                stringResponse = "{\"Успешно удалены\":" + stringResponse + "\";\"Code\"" + responseHttpCode + "\"}";
+                            byte[] data = baos.toByteArray();
+                            //pis.unread(imageData);
+                            contentLength = data.length;
+                            if (String.valueOf(responseHttpCode).matches("204")) {
+                                stringResponse = Arrays.toString(data);
+                                stringResponse = "{\"Успешно\":" + stringResponse + "\";\"Code\"" + responseHttpCode + "\"}";
                                 output.setValue(stringResponse);
-                                break;
-                            } else {
-                                stringResponse = "{\"Ошибка запроса\":" + " ; \"Code\"" + responseHttpCode + "\"}";
-                                throw new SiebelBusinessServiceException("NO_SUCH_METHOD", stringResponse);
                             }
-                        } catch (Exception e) {
-                            throw new SiebelBusinessServiceException("ERROR_GET_BIN_METHOD", "Request falled ");
-                        }
-                    }
-                    InputStream raw = null;
-                    try {
-                        raw = client.getInputStream();
-                    } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_GET_INPUT_STREAM", "{\"Ошибка запроса\":" + e +"\";\"Code\"" + "JBSError" + "\"}");
-                    }
-                    InputStream in = new BufferedInputStream(raw);
-                    byte[] data = new byte[contentLength];
-                    int bytesRead = 0;
-                    int offset = 0;
-                    try {
-                        while (offset < contentLength) {
-                            bytesRead = in.read(data, offset, data.length - offset);
-                            if (bytesRead == -1)
-                                break;
-                            offset += bytesRead;
-                        }
-                        in.close();
-                        if (offset != contentLength) {
-                            throw new SiebelBusinessServiceException("NOT_INT", "offset != contentLength " + offset);
+                            pis.close();
+                            baos.close();
+                            output.setByteValue(data);
+                        } else if (String.valueOf(responseHttpCode).matches("4.*") || String.valueOf(responseHttpCode).matches("5.*")) {
+                            stringResponse = "{\"Ошибка запроса\":" + ";\"Ответ\"" + responseHttpCode + "\"}";
+                            output.setValue(stringResponse);
+                            throw new SiebelBusinessServiceException("ERROR_CODE", "Error response.Code - " + responseHttpCode);
                         }
                     } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_BYTEVALUE_TO_RQ", "Error to TRY in GET");
+                        throw new SiebelBusinessServiceException("ERROR_TO_RQ", e + " Error to parse. Length- " + contentLength + ". Code- " + responseHttpCode);
                     }
-                    output.setByteValue(data);
+
                     break;
 
                 case 2:
-                    if (input.getByteValue() != null) {
-                        value = input.getByteValue();
+                    if (input.getByteValue() == null) {
+                        value = input.getValue().getBytes();
                     } else {
-                        value = input.getValue().getBytes(StandardCharsets.UTF_8);
+                        value = input.getByteValue();
                     }
                     int postDataLength = value.length;
 
@@ -180,14 +177,14 @@ public class JavaHttpTransport extends SiebelBusinessService {
                         HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
                         client = (HttpsURLConnection) new URL(url).openConnection();
                     } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_OPEN_CONNECTION", "Connection post falled ");
+                        throw new SiebelBusinessServiceException("ERROR_OPEN_CONNECTION", "Connection POST falled ");
                     }
                     client.setRequestProperty("User-Agent",
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36");
                     try {
                         client.setRequestMethod(httpMethod);
                     } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_SET_REQUEST_METHOD", "Connection post falled");
+                        throw new SiebelBusinessServiceException("ERROR_SET_REQUEST_METHOD", "Connection POST falled");
                     }
                     try {
                         client.setDoOutput(true);
@@ -197,10 +194,12 @@ public class JavaHttpTransport extends SiebelBusinessService {
                         client.setRequestProperty("Content-Length", Integer.toString(postDataLength));
                         client.setRequestProperty("Authorization", authorization);
                     } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_SET_REQUEST_PROP", "Error setRequestProperty to URL Connection ");
+                        throw new SiebelBusinessServiceException("ERROR_SET_REQUEST_PROP",
+                                "Error setRequestProperty to URL Connection ");
                     }
                     try (OutputStream os = client.getOutputStream()) {
                         os.write(value);
+                        responseHttpCode = client.getResponseCode();
                         try (BufferedReader inBuf = new BufferedReader(new InputStreamReader(client.getInputStream()))) {
                             String line;
                             StringBuilder response = new StringBuilder();
@@ -210,11 +209,14 @@ public class JavaHttpTransport extends SiebelBusinessService {
                             output.setValue(response.toString());
                         } catch (Exception e) {
                             responseHttpCode = client.getResponseCode();
-                            throw new SiebelBusinessServiceException("ERROR_BYTE_VALUE_POST", "Response error. Code -" + responseHttpCode);
+                            throw new SiebelBusinessServiceException("ERROR_BYTE_VALUE_POST",
+                                    "Response error. Code -" + responseHttpCode);
                         }
                         break;
                     } catch (Exception e) {
-                        throw new SiebelBusinessServiceException("ERROR_OUTPUTSTREAM", "Set OutputStream in POST-method error ");
+                        output.setValue(Arrays.toString(value));
+                        throw new SiebelBusinessServiceException("ERROR_OUTPUT_STREAM", "Method falled. Length content -"
+                                + value.length + ".Error code- " + responseHttpCode);
                     }
 
                 default:
