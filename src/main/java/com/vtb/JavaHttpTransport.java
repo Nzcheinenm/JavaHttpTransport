@@ -39,6 +39,7 @@ public class JavaHttpTransport extends SiebelBusinessService {
             HttpsURLConnection client;
             int responseHttpCode = 0;
             int valueMethod = 0;
+            String contentDisposRs = "";
 
             if (url == null || url.equals("") || (authorization == null)
                     || authorization.equals("") || (httpMethod == null)
@@ -108,6 +109,7 @@ public class JavaHttpTransport extends SiebelBusinessService {
                             InputStream raw = client.getInputStream();
                             PushbackInputStream pis = new PushbackInputStream(raw);
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            contentDisposRs = client.getHeaderField("Content-Disposition");
                             int code;
                             try {
                                 while ((code = pis.read()) != -1) {
@@ -132,9 +134,10 @@ public class JavaHttpTransport extends SiebelBusinessService {
                             }
                             pis.close();
                             baos.close();
+                            output.setProperty("Content-Disposition", contentDisposRs);
                             output.setByteValue(data);
                         } else if (String.valueOf(responseHttpCode).matches("4.*") || String.valueOf(responseHttpCode).matches("5.*")) {
-                            stringResponse = "{\"Ошибка запроса\":" + ";\"Ответ\"" + responseHttpCode + "\"}";
+                            stringResponse = "{\"Ошибка запроса\":" + "Error"+ ";\"Ответ\"" + responseHttpCode + "\"}";
                             output.setValue(stringResponse);
                             throw new SiebelBusinessServiceException("ERROR_CODE", "Error response.Code - " + responseHttpCode);
                         }
