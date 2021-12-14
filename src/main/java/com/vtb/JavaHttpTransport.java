@@ -109,7 +109,9 @@ public class JavaHttpTransport extends SiebelBusinessService {
                             InputStream raw = client.getInputStream();
                             PushbackInputStream pis = new PushbackInputStream(raw);
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            contentDisposRs = client.getHeaderField("Content-Disposition");
+                            if (client.getHeaderField("Content-Disposition") != null) {
+                                contentDisposRs = client.getHeaderField("Content-Disposition");
+                            }
                             int code;
                             try {
                                 while ((code = pis.read()) != -1) {
